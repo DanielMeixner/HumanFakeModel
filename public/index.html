@@ -73,7 +73,7 @@
         color: var(--cp-text);
         font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
       }
-      button, textarea { font: inherit; }
+      button, textarea, select { font: inherit; }
       .shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
       header {
         display: flex;
@@ -102,19 +102,68 @@
       .live { display: flex; align-items: center; gap: 8px; color: var(--cp-text-muted); font-size: 13px; }
       .live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cp-success); }
       main { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; min-height: 0; }
-      aside { border-right: 1px solid var(--cp-border); background: var(--cp-bg-elevated); min-height: 0; }
-      .aside-title {
+      aside { border-right: 1px solid var(--cp-border); background: var(--cp-bg-elevated); min-width: 0; min-height: 0; overflow-x: hidden; }
+      .section-summary {
         display: flex;
+        align-items: center;
         justify-content: space-between;
+        gap: 12px;
+        cursor: pointer;
+        list-style: none;
+      }
+      .section-summary::-webkit-details-marker { display: none; }
+      .section-summary::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        flex: 0 0 auto;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: rotate(-45deg);
+        transition: transform 150ms ease;
+      }
+      details[open] > .section-summary::before { transform: rotate(45deg); }
+      .section-summary:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: -2px; }
+      .summary-main { min-width: 0; flex: 1; }
+      .summary-meta { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+      .length-indicator { color: var(--cp-text-muted); font-size: 11px; font-weight: 500; text-transform: none; white-space: nowrap; }
+      .copy-button {
+        position: relative;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        border: 1px solid transparent;
+        border-radius: 0.375rem;
+        background: transparent;
+        color: var(--cp-text-muted);
+        cursor: pointer;
+      }
+      .copy-button:hover { border-color: var(--cp-border); background: var(--cp-surface-soft); color: var(--cp-text); }
+      .copy-button:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 1px; }
+      .copy-button::before, .copy-button::after {
+        content: "";
+        position: absolute;
+        width: 9px;
+        height: 11px;
+        border: 1.5px solid currentColor;
+        border-radius: 2px;
+      }
+      .copy-button::before { left: 8px; top: 7px; }
+      .copy-button::after { left: 11px; top: 10px; background: inherit; }
+      .copy-button.copied { color: var(--cp-success); }
+      .copy-button.copied::before { width: 6px; height: 11px; left: 10px; top: 6px; border-width: 0 2px 2px 0; border-radius: 0; transform: rotate(45deg); }
+      .copy-button.copied::after { display: none; }
+      .traffic-summary {
         padding: 18px 20px 12px;
         color: var(--cp-text-muted);
         font-size: 12px;
         font-weight: 700;
         text-transform: uppercase;
       }
-      #request-list { display: grid; gap: 4px; padding: 0 10px 16px; }
+      #request-list { display: grid; min-width: 0; gap: 4px; padding: 0 10px 16px; }
       .request-item {
         width: 100%;
+        min-width: 0;
         border: 1px solid transparent;
         background: transparent;
         color: var(--cp-text);
@@ -126,7 +175,7 @@
       .request-item:hover { background: var(--cp-surface-soft); }
       .request-item.active { background: var(--cp-accent-soft); border-color: var(--cp-accent); }
       .item-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
-      .item-model { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .item-model { min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .item-time, .item-preview { color: var(--cp-text-muted); font-size: 12px; }
       .item-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .status { font-size: 11px; font-weight: 700; text-transform: uppercase; }
@@ -141,11 +190,42 @@
       .request-view { display: none; max-width: 1000px; margin: 0 auto; }
       .request-view.visible { display: block; animation: appear 180ms ease-out; }
       @keyframes appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-      .view-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
-      .view-head h2 { margin: 0 0 5px; font-size: 22px; letter-spacing: 0; }
+      .request-summary { align-items: flex-start; margin-bottom: 14px; padding: 4px 0 6px; }
+      .request-summary h2 { margin: 0 0 5px; font-size: 22px; letter-spacing: 0; }
       .meta { color: var(--cp-text-muted); font-size: 13px; }
+      .request-facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 24px; }
+      .fact { padding: 5px 9px; border: 1px solid var(--cp-border); border-radius: 0.625rem; color: var(--cp-text-muted); font-size: 12px; }
+      .token-bar { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: -8px 0 24px; padding: 14px 16px; border: 1px solid var(--cp-border); background: var(--cp-surface); border-radius: 0.625rem; }
+      .token-model { min-width: 170px; }
+      .token-model label { margin-bottom: 5px; color: var(--cp-text-muted); font-size: 11px; }
+      select { width: 100%; padding: 7px 30px 7px 9px; color: var(--cp-text); background: var(--cp-bg-elevated); border: 1px solid var(--cp-border-strong); border-radius: 0.375rem; }
+      select:focus { outline: 2px solid var(--cp-accent); outline-offset: 1px; }
+      .token-counts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 20px; }
+      .token-stat { min-width: 72px; text-align: right; }
+      .token-value { display: block; font-size: 17px; font-weight: 700; }
+      .token-label { color: var(--cp-text-muted); font-size: 11px; }
+      .conversation { margin-bottom: 24px; }
+      .section-heading { margin-bottom: 12px; padding: 4px 0; }
+      .section-heading h3 { margin: 0; font-size: 14px; letter-spacing: 0; }
+      .message-count { color: var(--cp-text-muted); font-size: 12px; }
+      .message-list { display: grid; gap: 10px; }
+      .message { display: block; border: 1px solid var(--cp-border); border-left: 4px solid var(--cp-border-strong); background: var(--cp-surface); border-radius: 0.625rem; overflow: hidden; }
+      .message.system { border-left-color: var(--cp-warning); }
+      .message.user { border-left-color: var(--cp-accent); }
+      .message.assistant { border-left-color: var(--cp-success); }
+      .message.tool, .message.context { border-left-color: var(--cp-link); }
+      .message-role { align-items: flex-start; justify-content: flex-start; padding: 14px 12px; background: var(--cp-surface-soft); color: var(--cp-text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+      .message-role::before { margin-top: 2px; }
+      .message-content { min-width: 0; padding: 14px 16px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; font-size: 13px; }
+      .message-content code { font-size: 12px; }
+      .message-name { display: block; color: var(--cp-text-muted); font-size: 11px; margin-bottom: 6px; }
       .panel { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 16px; margin-bottom: 16px; overflow: hidden; }
-      .panel-title { padding: 13px 16px; border-bottom: 1px solid var(--cp-border); font-size: 13px; font-weight: 700; }
+      .panel-title { padding: 13px 16px; font-size: 13px; font-weight: 700; }
+      .panel[open] > .panel-title { border-bottom: 1px solid var(--cp-border); }
+      details.diagnostics { border-top: 1px solid var(--cp-border); margin: 24px 0 16px; }
+      details.diagnostics + details.diagnostics { margin-top: -16px; }
+      details.diagnostics summary { padding: 13px 4px; color: var(--cp-text-muted); font-size: 13px; font-weight: 600; }
+      details.diagnostics pre { border: 1px solid var(--cp-border); border-radius: 0.625rem; background: var(--cp-surface); }
       pre { margin: 0; padding: 18px; overflow: auto; max-height: 340px; line-height: 1.5; font-size: 13px; white-space: pre-wrap; }
       .composer { padding: 16px; }
       label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 9px; }
@@ -182,6 +262,11 @@
         aside { border-right: 0; border-bottom: 1px solid var(--cp-border); max-height: 230px; overflow: auto; }
         .workspace { padding: 20px 16px; }
         .welcome { margin-top: 8vh; }
+        .message { grid-template-columns: 1fr; }
+        .message-role { padding: 8px 12px; }
+        .token-bar { align-items: stretch; flex-direction: column; }
+        .token-counts { justify-content: space-between; }
+        .token-stat { text-align: left; }
         .hint { display: none; }
       }
     </style>
@@ -200,8 +285,10 @@
       </header>
       <main>
         <aside>
-          <div class="aside-title"><span>Incoming traffic</span><span id="request-count">0</span></div>
+          <details>
+          <summary class="section-summary traffic-summary"><span class="summary-main">Incoming traffic</span><span class="summary-meta"><span id="request-count">0</span><span class="length-indicator" id="traffic-length">0 chars</span></span></summary>
           <div id="request-list"><div class="empty">Waiting for a model request.</div></div>
+          </details>
         </aside>
         <section class="workspace">
           <div class="welcome" id="welcome">
@@ -209,47 +296,256 @@
             <p>When Copilot sends a request, it will appear here and remain open until you write the assistant response.</p>
           </div>
           <div class="request-view" id="request-view">
-            <div class="view-head">
-              <div><h2 id="request-title">Request</h2><div class="meta" id="request-meta"></div></div>
-              <span class="status" id="request-status"></span>
+            <details>
+              <summary class="section-summary request-summary">
+                <span class="summary-main"><h2 id="request-title">Request</h2><span class="meta" id="request-meta"></span></span>
+                <span class="summary-meta"><span class="status" id="request-status"></span><span class="length-indicator" id="request-length"></span></span>
+              </summary>
+            <div class="request-facts" id="request-facts"></div>
+            </details>
+            <div class="token-bar">
+              <div class="token-model">
+                <label for="token-model">Estimate tokens with</label>
+                <select id="token-model">
+                  <option value="gpt-5">GPT-5</option>
+                  <option value="gpt-4.1">GPT-4.1</option>
+                  <option value="gpt-4o">GPT-4o</option>
+                  <option value="o3">o3</option>
+                  <option value="gpt-4">GPT-4</option>
+                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                </select>
+              </div>
+              <div class="token-counts" aria-live="polite">
+                <div class="token-stat"><span class="token-value" id="prompt-tokens">-</span><span class="token-label">Input + context</span></div>
+                <div class="token-stat"><span class="token-value" id="completion-tokens">-</span><span class="token-label">Response</span></div>
+                <div class="token-stat"><span class="token-value" id="total-tokens">-</span><span class="token-label">Total</span></div>
+              </div>
             </div>
-            <div class="panel"><div class="panel-title">Payload</div><pre id="payload"></pre></div>
-            <div class="panel"><div class="panel-title">Headers</div><pre id="headers"></pre></div>
-            <div class="panel" id="composer-panel">
+            <details class="conversation" open>
+              <summary class="section-summary section-heading">
+                <h3 class="summary-main">Conversation input</h3>
+                <span class="summary-meta"><span class="message-count" id="message-count"></span><span class="length-indicator" id="conversation-length"></span></span>
+              </summary>
+              <div class="message-list" id="message-list"></div>
+            </details>
+            <details class="panel" id="composer-panel" open>
+              <summary class="section-summary panel-title"><span class="summary-main">Assistant response</span><span class="length-indicator" id="composer-length">0 chars</span></summary>
               <div class="composer">
                 <label for="reply">Assistant response</label>
                 <textarea id="reply" placeholder="Type the response Copilot should receive..."></textarea>
                 <div class="actions"><span class="hint">Press Cmd + Enter to send</span><button class="send" id="send">Send response</button></div>
               </div>
-            </div>
-            <div class="panel" id="reply-panel" hidden><div class="panel-title">Response sent</div><div class="reply-block" id="sent-reply"></div></div>
+            </details>
+            <details class="panel" id="reply-panel" open hidden><summary class="section-summary panel-title"><span class="summary-main">Response sent</span><span class="length-indicator" id="reply-length"></span></summary><div class="reply-block" id="sent-reply"></div></details>
+            <details class="diagnostics"><summary class="section-summary"><span class="summary-main">Raw payload</span><span class="length-indicator" id="payload-length"></span></summary><pre id="payload"></pre></details>
+            <details class="diagnostics"><summary class="section-summary"><span class="summary-main">Request headers</span><span class="length-indicator" id="headers-length"></span></summary><pre id="headers"></pre></details>
           </div>
         </section>
       </main>
     </div>
     <script>
-      const state = { requests: [], selectedId: null };
+      const state = {
+        requests: [], selectedId: null, tokenCountSequence: 0,
+        tokenModel: localStorage.getItem("token-model") || "gpt-5",
+      };
       const elements = {
         list: document.querySelector("#request-list"), count: document.querySelector("#request-count"),
+        trafficLength: document.querySelector("#traffic-length"), requestLength: document.querySelector("#request-length"),
         welcome: document.querySelector("#welcome"), view: document.querySelector("#request-view"),
         title: document.querySelector("#request-title"), meta: document.querySelector("#request-meta"),
         status: document.querySelector("#request-status"), payload: document.querySelector("#payload"),
+        payloadLength: document.querySelector("#payload-length"), headersLength: document.querySelector("#headers-length"),
         headers: document.querySelector("#headers"), composer: document.querySelector("#composer-panel"),
+        facts: document.querySelector("#request-facts"), messageList: document.querySelector("#message-list"),
+        messageCount: document.querySelector("#message-count"), conversationLength: document.querySelector("#conversation-length"),
         replyPanel: document.querySelector("#reply-panel"), sentReply: document.querySelector("#sent-reply"),
+        replyLength: document.querySelector("#reply-length"), composerLength: document.querySelector("#composer-length"),
         reply: document.querySelector("#reply"), send: document.querySelector("#send"),
+        tokenModel: document.querySelector("#token-model"), promptTokens: document.querySelector("#prompt-tokens"),
+        completionTokens: document.querySelector("#completion-tokens"), totalTokens: document.querySelector("#total-tokens"),
         connection: document.querySelector("#connection-label"),
       };
+      elements.tokenModel.value = state.tokenModel;
+
+      function formatLength(text) {
+        return `${Array.from(String(text ?? "")).length.toLocaleString()} chars`;
+      }
+
+      function sectionText(section) {
+        const copy = section.cloneNode(true);
+        copy.querySelectorAll("summary, .copy-button").forEach((element) => element.remove());
+        copy.querySelectorAll("textarea").forEach((textarea) => {
+          const source = section.querySelector(`#${CSS.escape(textarea.id)}`);
+          textarea.replaceWith(document.createTextNode(source?.value || ""));
+        });
+        return copy.textContent.trim();
+      }
+
+      async function copyText(text) {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.append(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+
+      function installCopyButtons(root = document) {
+        root.querySelectorAll("details").forEach((section) => {
+          const summary = section.querySelector(":scope > summary");
+          if (!summary || summary.querySelector(".copy-button")) return;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "copy-button";
+          button.title = "Copy section to clipboard";
+          button.setAttribute("aria-label", "Copy section to clipboard");
+          button.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            try {
+              await copyText(sectionText(section));
+              button.classList.add("copied");
+              button.title = "Copied";
+              button.setAttribute("aria-label", "Copied to clipboard");
+              window.setTimeout(() => {
+                button.classList.remove("copied");
+                button.title = "Copy section to clipboard";
+                button.setAttribute("aria-label", "Copy section to clipboard");
+              }, 1400);
+            } catch {
+              button.title = "Could not copy";
+            }
+          });
+          const meta = summary.querySelector(":scope > .summary-meta");
+          (meta || summary).append(button);
+        });
+      }
 
       function promptPreview(request) {
         const messages = request.body.messages;
         if (!Array.isArray(messages) || !messages.length) return "No messages";
-        const content = messages[messages.length - 1].content;
+        const visibleMessages = displayMessages(messages);
+        const userMessage = [...visibleMessages].reverse().find((message) => message.role === "user");
+        return contentText(userMessage?.content ?? visibleMessages[visibleMessages.length - 1].content);
+      }
+
+      function contentText(content) {
         if (typeof content === "string") return content;
-        return JSON.stringify(content);
+        if (!Array.isArray(content)) return JSON.stringify(content, null, 2);
+        return content.map((part) => {
+          if (typeof part === "string") return part;
+          if (part?.type === "text" || part?.type === "input_text") return part.text || "";
+          if (part?.type === "image_url") return `[Image: ${part.image_url?.url || "attached"}]`;
+          return JSON.stringify(part, null, 2);
+        }).filter(Boolean).join("\n\n");
+      }
+
+      function displayMessages(messages) {
+        return (Array.isArray(messages) ? messages : []).flatMap((message) => {
+          if (message.role !== "user" || typeof message.content !== "string") return [message];
+          const requestMatch = message.content.match(/<userRequest>([\s\S]*?)<\/userRequest>/i);
+          if (requestMatch) {
+            const context = message.content.replace(requestMatch[0], "").trim();
+            return [
+              ...(context ? [{ ...message, role: "context", displayRole: "surrounding context", content: context }] : []),
+              { ...message, displayRole: "user request", content: requestMatch[1].trim() },
+            ];
+          }
+          if (/^\s*<(environment_info|workspace_info|context|attachments|reminderInstructions)>/i.test(message.content)) {
+            return [{ ...message, role: "context", displayRole: "surrounding context" }];
+          }
+          return [{ ...message, displayRole: "user request" }];
+        });
+      }
+
+      function renderMessages(messages) {
+        const items = displayMessages(messages);
+        elements.messageCount.textContent = `${items.length} message${items.length === 1 ? "" : "s"}`;
+        elements.conversationLength.textContent = formatLength(items.map((message) => contentText(message.content)).join(""));
+        if (!items.length) {
+          elements.messageList.innerHTML = '<div class="empty">This request has no messages.</div>';
+          return;
+        }
+        elements.messageList.replaceChildren(...items.map((message) => {
+          const article = document.createElement("details");
+          const role = ["system", "user", "assistant", "tool"].includes(message.role) ? message.role : "context";
+          article.className = `message ${role}`;
+          article.open = role === "user" || role === "assistant";
+          const roleLabel = document.createElement("summary");
+          roleLabel.className = "section-summary message-role";
+          const roleText = document.createElement("span");
+          roleText.className = "summary-main";
+          roleText.textContent = message.displayRole || (message.role === "system" ? "system prompt" : message.role || "context");
+          const length = document.createElement("span");
+          length.className = "length-indicator";
+          length.textContent = formatLength(contentText(message.content));
+          roleLabel.append(roleText, length);
+          const content = document.createElement("div");
+          content.className = "message-content";
+          if (message.name) {
+            const name = document.createElement("span");
+            name.className = "message-name";
+            name.textContent = message.name;
+            content.append(name);
+          }
+          content.append(document.createTextNode(contentText(message.content)));
+          article.append(roleLabel, content);
+          return article;
+        }));
+        installCopyButtons(elements.messageList);
+      }
+
+      function renderFacts(request) {
+        const facts = [
+          request.body.stream ? "Streaming" : "Single response",
+          `Temperature ${request.body.temperature ?? "default"}`,
+          request.body.tools?.length ? `${request.body.tools.length} tool${request.body.tools.length === 1 ? "" : "s"}` : "No tools",
+        ];
+        elements.facts.replaceChildren(...facts.map((text) => {
+          const fact = document.createElement("span");
+          fact.className = "fact";
+          fact.textContent = text;
+          return fact;
+        }));
+      }
+
+      async function updateTokenCount() {
+        const request = state.requests.find((item) => item.id === state.selectedId);
+        if (!request) return;
+        const sequence = ++state.tokenCountSequence;
+        const reply = request.status === "pending" ? elements.reply.value : request.reply || "";
+        try {
+          const response = await fetch("/api/token-count", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: request.body.messages,
+              tools: request.body.tools,
+              reply,
+              tokenModel: state.tokenModel,
+            }),
+          });
+          if (!response.ok) throw new Error("Token estimate unavailable");
+          const usage = await response.json();
+          if (sequence !== state.tokenCountSequence) return;
+          elements.promptTokens.textContent = usage.prompt_tokens.toLocaleString();
+          elements.completionTokens.textContent = usage.completion_tokens.toLocaleString();
+          elements.totalTokens.textContent = usage.total_tokens.toLocaleString();
+        } catch {
+          if (sequence !== state.tokenCountSequence) return;
+          elements.promptTokens.textContent = elements.completionTokens.textContent = elements.totalTokens.textContent = "-";
+        }
       }
 
       function render() {
         elements.count.textContent = state.requests.length;
+        elements.trafficLength.textContent = formatLength(JSON.stringify(state.requests));
         if (!state.requests.length) {
           elements.list.innerHTML = '<div class="empty">Waiting for a model request.</div>';
           return;
@@ -282,11 +578,21 @@
         elements.meta.textContent = `${request.method} ${request.path} · ${new Date(request.receivedAt).toLocaleString()}`;
         elements.status.textContent = request.status;
         elements.status.className = `status ${request.status}`;
-        elements.payload.textContent = JSON.stringify(request.body, null, 2);
-        elements.headers.textContent = JSON.stringify(request.headers, null, 2);
+        renderFacts(request);
+        renderMessages(request.body.messages);
+        const payload = JSON.stringify(request.body, null, 2);
+        const headers = JSON.stringify(request.headers, null, 2);
+        elements.requestLength.textContent = formatLength(payload);
+        elements.payload.textContent = payload;
+        elements.payloadLength.textContent = formatLength(payload);
+        elements.headers.textContent = headers;
+        elements.headersLength.textContent = formatLength(headers);
         elements.composer.hidden = request.status !== "pending";
         elements.replyPanel.hidden = !request.reply;
         elements.sentReply.textContent = request.reply || "";
+        elements.replyLength.textContent = formatLength(request.reply || "");
+        elements.composerLength.textContent = formatLength(elements.reply.value);
+        updateTokenCount();
         if (request.status === "pending") elements.reply.focus();
       }
 
@@ -305,7 +611,7 @@
         elements.send.disabled = true;
         try {
           const response = await fetch(`/api/requests/${state.selectedId}/reply`, {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reply }),
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reply, tokenModel: state.tokenModel }),
           });
           if (!response.ok) throw new Error((await response.json()).error?.message || "Could not send response");
           await loadRequests();
@@ -317,6 +623,17 @@
       }
 
       elements.send.addEventListener("click", sendReply);
+      let tokenCountTimer;
+      elements.reply.addEventListener("input", () => {
+        elements.composerLength.textContent = formatLength(elements.reply.value);
+        clearTimeout(tokenCountTimer);
+        tokenCountTimer = setTimeout(updateTokenCount, 150);
+      });
+      elements.tokenModel.addEventListener("change", () => {
+        state.tokenModel = elements.tokenModel.value;
+        localStorage.setItem("token-model", state.tokenModel);
+        updateTokenCount();
+      });
       elements.reply.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) sendReply();
       });
@@ -324,6 +641,7 @@
       events.onmessage = (event) => { if (JSON.parse(event.data).type === "requests-changed") loadRequests(); };
       events.onopen = () => { elements.connection.textContent = "Listening"; };
       events.onerror = () => { elements.connection.textContent = "Reconnecting"; };
+      installCopyButtons();
       loadRequests();
     </script>
   </body>
