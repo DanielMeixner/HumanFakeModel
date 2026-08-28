@@ -161,6 +161,9 @@
         text-transform: uppercase;
       }
       #request-list { display: grid; min-width: 0; gap: 4px; padding: 0 10px 16px; }
+      .request-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .compare-check { flex: 0 0 auto; width: 16px; height: 16px; accent-color: var(--cp-accent); cursor: pointer; }
+      .compare-check:disabled { cursor: not-allowed; opacity: 0.4; }
       .request-item {
         width: 100%;
         min-width: 0;
@@ -189,6 +192,9 @@
       .welcome p { color: var(--cp-text-muted); line-height: 1.6; }
       .request-view { display: none; max-width: 1000px; margin: 0 auto; }
       .request-view.visible { display: block; animation: appear 180ms ease-out; }
+      .compare-view { display: none; max-width: 1600px; margin: 0 auto; gap: 20px; grid-template-columns: 1fr 1fr; align-items: start; }
+      .compare-view.visible { display: grid; animation: appear 180ms ease-out; }
+      .compare-column { min-width: 0; }
       @keyframes appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
       .request-summary { align-items: flex-start; margin-bottom: 14px; padding: 4px 0 6px; }
       .request-summary h2 { margin: 0 0 5px; font-size: 22px; letter-spacing: 0; }
@@ -262,6 +268,7 @@
         aside { border-right: 0; border-bottom: 1px solid var(--cp-border); max-height: 230px; overflow: auto; }
         .workspace { padding: 20px 16px; }
         .welcome { margin-top: 8vh; }
+        .compare-view.visible { grid-template-columns: 1fr; }
         .message { grid-template-columns: 1fr; }
         .message-role { padding: 8px 12px; }
         .token-bar { align-items: stretch; flex-direction: column; }
@@ -340,12 +347,13 @@
             <details class="diagnostics"><summary class="section-summary"><span class="summary-main">Raw payload</span><span class="length-indicator" id="payload-length"></span></summary><pre id="payload"></pre></details>
             <details class="diagnostics"><summary class="section-summary"><span class="summary-main">Request headers</span><span class="length-indicator" id="headers-length"></span></summary><pre id="headers"></pre></details>
           </div>
+          <div class="compare-view" id="compare-view"></div>
         </section>
       </main>
     </div>
     <script>
       const state = {
-        requests: [], selectedId: null, tokenCountSequence: 0,
+        requests: [], selectedId: null, tokenCountSequence: 0, compareIds: [],
         tokenModel: localStorage.getItem("token-model") || "gpt-5",
       };
       const elements = {
@@ -364,6 +372,7 @@
         tokenModel: document.querySelector("#token-model"), promptTokens: document.querySelector("#prompt-tokens"),
         completionTokens: document.querySelector("#completion-tokens"), totalTokens: document.querySelector("#total-tokens"),
         connection: document.querySelector("#connection-label"),
+        compare: document.querySelector("#compare-view"),
       };
       elements.tokenModel.value = state.tokenModel;
 
@@ -472,7 +481,11 @@
           elements.messageList.innerHTML = '<div class="empty">This request has no messages.</div>';
           return;
         }
-        elements.messageList.replaceChildren(...items.map((message) => {
+        elements.messageList.replaceChildren(...items.map(messageArticle));
+        installCopyButtons(elements.messageList);
+      }
+
+      function messageArticle(message) {
           const article = document.createElement("details");
           const role = ["system", "user", "assistant", "tool"].includes(message.role) ? message.role : "context";
           article.className = `message ${role}`;
@@ -497,22 +510,39 @@
           content.append(document.createTextNode(contentText(message.content)));
           article.append(roleLabel, content);
           return article;
-        }));
-        installCopyButtons(elements.messageList);
       }
 
       function renderFacts(request) {
+        elements.facts.replaceChildren(...factElements(request));
+      }
+
+      function factElements(request) {
         const facts = [
           request.body.stream ? "Streaming" : "Single response",
           `Temperature ${request.body.temperature ?? "default"}`,
           request.body.tools?.length ? `${request.body.tools.length} tool${request.body.tools.length === 1 ? "" : "s"}` : "No tools",
         ];
-        elements.facts.replaceChildren(...facts.map((text) => {
+        return facts.map((text) => {
           const fact = document.createElement("span");
           fact.className = "fact";
           fact.textContent = text;
           return fact;
-        }));
+        });
+      }
+
+      async function fetchUsage(request, reply) {
+        const response = await fetch("/api/token-count", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: request.body.messages,
+            tools: request.body.tools,
+            reply,
+            tokenModel: state.tokenModel,
+          }),
+        });
+        if (!response.ok) throw new Error("Token estimate unavailable");
+        return response.json();
       }
 
       async function updateTokenCount() {
@@ -521,18 +551,7 @@
         const sequence = ++state.tokenCountSequence;
         const reply = request.status === "pending" ? elements.reply.value : request.reply || "";
         try {
-          const response = await fetch("/api/token-count", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              messages: request.body.messages,
-              tools: request.body.tools,
-              reply,
-              tokenModel: state.tokenModel,
-            }),
-          });
-          if (!response.ok) throw new Error("Token estimate unavailable");
-          const usage = await response.json();
+          const usage = await fetchUsage(request, reply);
           if (sequence !== state.tokenCountSequence) return;
           elements.promptTokens.textContent = usage.prompt_tokens.toLocaleString();
           elements.completionTokens.textContent = usage.completion_tokens.toLocaleString();
@@ -551,6 +570,16 @@
           return;
         }
         elements.list.replaceChildren(...state.requests.map((request) => {
+          const row = document.createElement("div");
+          row.className = "request-row";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "compare-check";
+          checkbox.checked = state.compareIds.includes(request.id);
+          checkbox.disabled = !checkbox.checked && state.compareIds.length >= 2;
+          checkbox.title = checkbox.disabled ? "Deselect a request to compare another one" : "Select two requests to compare";
+          checkbox.setAttribute("aria-label", "Compare this request");
+          checkbox.addEventListener("change", () => toggleCompare(request.id));
           const button = document.createElement("button");
           button.className = `request-item${request.id === state.selectedId ? " active" : ""}`;
           button.innerHTML = `<div class="item-top"><span class="item-model"></span><span class="status ${request.status}">${request.status}</span></div><div class="item-preview"></div><div class="item-time"></div>`;
@@ -558,9 +587,150 @@
           button.querySelector(".item-preview").textContent = promptPreview(request);
           button.querySelector(".item-time").textContent = new Date(request.receivedAt).toLocaleTimeString();
           button.addEventListener("click", () => selectRequest(request.id));
-          return button;
+          row.append(checkbox, button);
+          return row;
         }));
+        showView();
+      }
+
+      function toggleCompare(id) {
+        const index = state.compareIds.indexOf(id);
+        if (index >= 0) state.compareIds.splice(index, 1);
+        else if (state.compareIds.length < 2) state.compareIds.push(id);
+        render();
+      }
+
+      function showView() {
+        const comparing = state.compareIds.length === 2;
+        elements.compare.classList.toggle("visible", comparing);
+        if (comparing) {
+          elements.welcome.hidden = true;
+          elements.view.classList.remove("visible");
+          renderCompare();
+          return;
+        }
+        elements.compare.replaceChildren();
         showSelected();
+      }
+
+      function renderCompare() {
+        const picked = state.compareIds
+          .map((id) => state.requests.find((item) => item.id === id))
+          .filter(Boolean);
+        elements.compare.replaceChildren(...picked.map(compareColumn));
+      }
+
+      function lengthTag(text) {
+        const span = document.createElement("span");
+        span.className = "length-indicator";
+        span.textContent = formatLength(text);
+        return span;
+      }
+
+      function compareSection(className, title, metaNodes, body, open = true) {
+        const section = document.createElement("details");
+        section.className = className;
+        section.open = open;
+        const summary = document.createElement("summary");
+        summary.className = `section-summary ${className.includes("panel") ? "panel-title" : className.includes("conversation") ? "section-heading" : ""}`;
+        const main = document.createElement("span");
+        main.className = "summary-main";
+        main.textContent = title;
+        const meta = document.createElement("span");
+        meta.className = "summary-meta";
+        meta.append(...metaNodes);
+        summary.append(main, meta);
+        section.append(summary, body);
+        return section;
+      }
+
+      function compareColumn(request) {
+        const column = document.createElement("div");
+        column.className = "compare-column";
+        const payload = JSON.stringify(request.body, null, 2);
+        const headers = JSON.stringify(request.headers, null, 2);
+        const items = displayMessages(request.body.messages);
+        const reply = request.reply || "";
+
+        const head = document.createElement("details");
+        head.open = true;
+        const headSummary = document.createElement("summary");
+        headSummary.className = "section-summary request-summary";
+        const headMain = document.createElement("span");
+        headMain.className = "summary-main";
+        const heading = document.createElement("h2");
+        heading.textContent = request.body.model || "human-fake-model";
+        const meta = document.createElement("span");
+        meta.className = "meta";
+        meta.textContent = `${request.method} ${request.path} · ${new Date(request.receivedAt).toLocaleString()}`;
+        headMain.append(heading, meta);
+        const headMeta = document.createElement("span");
+        headMeta.className = "summary-meta";
+        const status = document.createElement("span");
+        status.className = `status ${request.status}`;
+        status.textContent = request.status;
+        headMeta.append(status, lengthTag(payload));
+        headSummary.append(headMain, headMeta);
+        const facts = document.createElement("div");
+        facts.className = "request-facts";
+        facts.append(...factElements(request));
+        head.append(headSummary, facts);
+
+        const tokenBar = document.createElement("div");
+        tokenBar.className = "token-bar";
+        const tokenCounts = document.createElement("div");
+        tokenCounts.className = "token-counts";
+        const tokenValues = ["Input + context", "Response", "Total"].map((label) => {
+          const stat = document.createElement("div");
+          stat.className = "token-stat";
+          const value = document.createElement("span");
+          value.className = "token-value";
+          value.textContent = "-";
+          const labelNode = document.createElement("span");
+          labelNode.className = "token-label";
+          labelNode.textContent = label;
+          stat.append(value, labelNode);
+          tokenCounts.append(stat);
+          return value;
+        });
+        tokenBar.append(tokenCounts);
+        fetchUsage(request, reply)
+          .then((usage) => {
+            tokenValues[0].textContent = usage.prompt_tokens.toLocaleString();
+            tokenValues[1].textContent = usage.completion_tokens.toLocaleString();
+            tokenValues[2].textContent = usage.total_tokens.toLocaleString();
+          })
+          .catch(() => {});
+
+        const messageList = document.createElement("div");
+        messageList.className = "message-list";
+        if (items.length) messageList.append(...items.map(messageArticle));
+        else messageList.innerHTML = '<div class="empty">This request has no messages.</div>';
+        const messageCount = document.createElement("span");
+        messageCount.className = "message-count";
+        messageCount.textContent = `${items.length} message${items.length === 1 ? "" : "s"}`;
+        const conversation = compareSection(
+          "conversation",
+          "Conversation input",
+          [messageCount, lengthTag(items.map((message) => contentText(message.content)).join(""))],
+          messageList,
+        );
+
+        const replyBlock = document.createElement("div");
+        replyBlock.className = "reply-block";
+        replyBlock.textContent = reply || "No response sent yet.";
+        const replyPanel = compareSection("panel", reply ? "Response sent" : "Assistant response", [lengthTag(reply)], replyBlock);
+
+        const payloadPre = document.createElement("pre");
+        payloadPre.textContent = payload;
+        const payloadPanel = compareSection("diagnostics", "Raw payload", [lengthTag(payload)], payloadPre, false);
+        const headersPre = document.createElement("pre");
+        headersPre.textContent = headers;
+        const headersPanel = compareSection("diagnostics", "Request headers", [lengthTag(headers)], headersPre, false);
+
+        column.append(head, tokenBar, conversation, replyPanel, payloadPanel, headersPanel);
+        installCopyButtons(column);
+        return column;
       }
 
       function selectRequest(id) {
@@ -571,7 +741,11 @@
 
       function showSelected() {
         const request = state.requests.find((item) => item.id === state.selectedId);
-        if (!request) return;
+        if (!request) {
+          elements.welcome.hidden = false;
+          elements.view.classList.remove("visible");
+          return;
+        }
         elements.welcome.hidden = true;
         elements.view.classList.add("visible");
         elements.title.textContent = request.body.model || "human-fake-model";
@@ -599,6 +773,7 @@
       async function loadRequests() {
         const response = await fetch("/api/requests");
         state.requests = await response.json();
+        state.compareIds = state.compareIds.filter((id) => state.requests.some((item) => item.id === id));
         if (!state.selectedId || !state.requests.some((item) => item.id === state.selectedId)) {
           state.selectedId = state.requests.find((item) => item.status === "pending")?.id || state.requests[0]?.id || null;
         }
@@ -633,6 +808,7 @@
         state.tokenModel = elements.tokenModel.value;
         localStorage.setItem("token-model", state.tokenModel);
         updateTokenCount();
+        if (state.compareIds.length === 2) renderCompare();
       });
       elements.reply.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) sendReply();
