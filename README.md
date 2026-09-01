@@ -2,6 +2,15 @@
 
 A local, human-in-the-loop OpenAI-compatible endpoint. Requests from GitHub Copilot appear in the browser and stay pending until you type the model response.
 
+## What it does
+
+- Exposes OpenAI-compatible model discovery and Chat Completions endpoints.
+- Displays incoming conversations, request metadata, headers, and raw payloads in a live browser UI.
+- Supports regular and streamed responses.
+- Estimates input and response tokens with several GPT and o-series tokenizers.
+- Keeps a request history for the lifetime of the server and compares any two requests side by side.
+- Provides collapsible, copyable sections and character counts for inspecting large prompts.
+
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 18 or newer
@@ -11,9 +20,10 @@ VS Code supports custom endpoint models for chat without requiring a GitHub acco
 
 ## Run locally
 
-From this repository, start the server:
+Install dependencies and start the server:
 
 ```bash
+npm install
 npm start
 ```
 
@@ -84,9 +94,29 @@ The explicit model URL must include `/v1/chat/completions`. The `toolCalling` an
 
 The VS Code request remains pending until you send a response from the browser. The server supports both regular and streamed Chat Completions requests.
 
+## Use the browser UI
+
+- Select a request from **Incoming traffic** to inspect its conversation, request settings, raw payload, and headers.
+- Expand or collapse sections by selecting their headings. Use the copy button on a heading to copy that section.
+- Type a response and select **Send response**, or press `Cmd+Enter` on macOS and `Ctrl+Enter` on Windows/Linux.
+- Select the checkboxes beside two requests to compare their inputs, responses, metadata, and token estimates side by side.
+- Completed and cancelled requests remain visible until the server restarts.
+
 ## Token usage
 
 Each request shows estimated input, response, and total token counts. GPT-5 is the default tokenizer; use the selector to recalculate with GPT-4.1, GPT-4o, o3, GPT-4, or GPT-3.5 Turbo. The selection is saved in the browser and the final counts are returned in the OpenAI-compatible `usage` object. Counts include the supplied conversation context and tool definitions, but remain estimates because provider-side prompt formatting can differ.
+
+## API
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/v1/models` | Lists the `human-fake-model` model. |
+| `POST` | `/v1/chat/completions` | Accepts an OpenAI Chat Completions request and waits for a browser response. |
+| `GET` | `/api/requests` | Returns requests held by the current server process. |
+| `GET` | `/api/events` | Sends browser updates using server-sent events. |
+| `POST` | `/api/token-count` | Estimates token usage for messages, tools, and a response. |
+
+The model endpoints are also available without the `/v1` prefix. Request history is stored only in memory; restarting the server clears it.
 
 ## Troubleshooting
 
@@ -96,4 +126,6 @@ Each request shows estimated input, response, and total token counts. GPT-5 is t
 - **Connection refused:** confirm that the port in the model URL matches the port printed by the server.
 - **A request never completes:** return to the browser UI and send a non-empty response. Closing or cancelling the VS Code request marks it as cancelled.
 
-For local testing, the server binds to `127.0.0.1`, accepts any bearer token, and should not be exposed to an untrusted network.
+## Security
+
+By default, the server binds to `127.0.0.1`, accepts any bearer token, and performs no authentication. It is intended for local testing and should not be exposed to an untrusted network. If you override `HOST`, ensure the surrounding network is trusted.
