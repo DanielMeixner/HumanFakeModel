@@ -292,7 +292,7 @@
       </header>
       <main>
         <aside>
-          <details>
+          <details open>
           <summary class="section-summary traffic-summary"><span class="summary-main">Incoming traffic</span><span class="summary-meta"><span id="request-count">0</span><span class="length-indicator" id="traffic-length">0 chars</span></span></summary>
           <div id="request-list"><div class="empty">Waiting for a model request.</div></div>
           </details>
@@ -772,9 +772,15 @@
 
       async function loadRequests() {
         const response = await fetch("/api/requests");
-        state.requests = await response.json();
+        const previousIds = new Set(state.requests.map((item) => item.id));
+        const requests = await response.json();
+        const newestRequest = requests.find((item) => !previousIds.has(item.id));
+        state.requests = requests;
         state.compareIds = state.compareIds.filter((id) => state.requests.some((item) => item.id === id));
-        if (!state.selectedId || !state.requests.some((item) => item.id === state.selectedId)) {
+        if (newestRequest) {
+          state.selectedId = newestRequest.id;
+          elements.reply.value = "";
+        } else if (!state.selectedId || !state.requests.some((item) => item.id === state.selectedId)) {
           state.selectedId = state.requests.find((item) => item.status === "pending")?.id || state.requests[0]?.id || null;
         }
         render();

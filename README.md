@@ -122,7 +122,7 @@ The model endpoints are also available without the `/v1` prefix. Request history
 
 - **The model is missing from the picker:** restart VS Code after saving `chatLanguageModels.json`. Also ensure the workspace is trusted; Restricted Mode can limit the picker to **Auto**.
 - **The model is missing in Agent mode:** this is expected because `toolCalling` is `false`. Select it in Chat/Ask mode.
-- **Requests do not appear in the browser:** keep `npm start` running and verify `curl http://127.0.0.1:3000/v1/models` succeeds.
+- **Requests do not appear in the browser:** keep `npm start` running and verify `curl http://127.0.0.1:3000/v1/models` succeeds. The **Incoming traffic** panel includes requests that VS Code cancelled before a response was sent.
 - **Connection refused:** confirm that the port in the model URL matches the port printed by the server.
 - **A request never completes:** return to the browser UI and send a non-empty response. Closing or cancelling the VS Code request marks it as cancelled.
 
