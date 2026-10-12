@@ -71,7 +71,7 @@ This follows the VS Code [Add a custom endpoint model](https://code.visualstudio
         "id": "human-fake-model",
         "name": "Human Fake Model",
         "url": "http://127.0.0.1:3000/v1/chat/completions",
-        "toolCalling": false,
+        "toolCalling": true,
         "vision": false,
         "maxInputTokens": 32000,
         "maxOutputTokens": 4096
